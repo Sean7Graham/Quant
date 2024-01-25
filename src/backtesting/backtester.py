@@ -1,8 +1,16 @@
+# backtester.py
+
+import pandas as pd
+from pykalman import KalmanFilter
+
+from strategy.kalman_pairs_trading import KalmanFilterStrategy
+
+
 class Backtester:
     def __init__(self, strategy):
         self.strategy = strategy
 
-    def backtest(df, s1, s2):
+    def kalman_backtest(df, s1, s2):
         #############################################################
         # INPUT:
         # DataFrame of prices (df)
@@ -18,17 +26,20 @@ class Backtester:
         x = df[s1]
         y = df[s2]
 
+        kalman_strategy = KalmanFilterStrategy  # TODO change
+
         # Run regression (including Kalman Filter) to find hedge ratio and then create spread series
         df1 = pd.DataFrame({"y": y, "x": x})
         df1.index = pd.to_datetime(df1.index)
-        state_means = KalmanFilterRegression(
-            KalmanFilterAverage(x), KalmanFilterAverage(y)
+        state_means = (
+            kalman_strategy.KalmanFilterAverage(x),
+            kalman_strategy.KalmanFilterAverage(y),
         )
         df1["hr"] = -state_means[:, 0]
         df1["spread"] = df1.y + (df1.x * df1.hr)
 
         # calculate half life
-        halflife = half_life(df1["spread"])
+        halflife = kalman_strategy.half_life(df1["spread"])
 
         # calculate z-score with window = half life period
         meanSpread = df1.spread.rolling(window=halflife).mean()
