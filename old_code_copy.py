@@ -35,7 +35,7 @@ import seaborn as sns
 import matplotlib as mpl
 import quantstats as qs
 import statsmodels.api as sm
-from pykalman import KalmanFilter
+from pykalman import KalmanFilter, UnscentedKalmanFilter
 from math import sqrt
 import warnings
 import ffn
@@ -264,14 +264,6 @@ prices = get_symbols(
     symbols, data_source="yahoo", ohlc="Close", begin_date=start, end_date=end
 )
 
-start = pd.Timestamp("2015-01-01")
-end = pd.Timestamp("2023-11-24")
-
-
-prices = get_symbols(
-    symbols, data_source="yahoo", ohlc="Close", begin_date=start, end_date=end
-)
-
 combo = prices.copy()
 combo.index = pd.DatetimeIndex(combo.index)
 combo.head()
@@ -310,8 +302,44 @@ def KalmanFilterAverage(x):
     return state_means
 
 
-# Kalman filter regression
 def KalmanFilterRegression(x, y):
+    delta = 1e-3
+    trans_cov = delta / (1 - delta) * np.eye(2)  # How much random walk wiggles
+    obs_mat = np.expand_dims(np.vstack([[x], [np.ones(len(x))]]).T, axis=1)
+    kf = UnscentedKalmanFilter(
+        n_dim_obs=1,
+        n_dim_state=2,  # y is 1-dimensional, (alpha, beta) is 2-dimensional
+        initial_state_mean=[0, 0],
+        initial_state_covariance=np.ones((2, 2)),
+        transition_matrices=np.eye(2),
+        observation_matrices=obs_mat,
+        observation_covariance=2,
+        transition_covariance=trans_cov,
+    )
+    # Use the observations y to get running estimates and errors for the state parameters
+    state_means, state_covs = kf.filter(y.values)
+    return state_means
+
+
+# Kalman filter regression
+# def KalmanFilterRegression(x, y):
+
+#     obs_mat_F = np.transpose(np.vstack([data[sym_a].values, np.ones(data.shape[0])])).reshape(-1, 1, 2)
+
+#     kf = UnscentedKalmanFilterKalmanFilter(n_dim_obs=1,                                      # y is 1-dimensional
+#                     n_dim_state=2,                                    #  states (alpha, beta) is 2-dimensinal
+#                     initial_state_mean=np.ones(2),                    #  initial value of intercept and slope theta0|0
+#                     initial_state_covariance=np.ones((2, 2)),         # initial cov matrix between intercept and slope P0|0
+#                     transition_matrices=np.eye(2),                    # G, constant
+#                     observation_matrices=obs_mat_F,                   # F, depends on x
+#                     observation_covariance=1,                         # v_t, constant
+#                     transition_covariance= np.eye(2))                 # w_t, constant
+#     # Use the observations y to get running estimates and errors for the state parameters
+#     state_means, state_covs = kf.filter(y.values)
+#     return state_means
+
+
+def KalmanFilterRegression_old(x, y):
     delta = 1e-3
     trans_cov = delta / (1 - delta) * np.eye(2)  # How much random walk wiggles
     obs_mat = np.expand_dims(np.vstack([[x], [np.ones(len(x))]]).T, axis=1)
@@ -479,24 +507,22 @@ def find_cointegrated_pairs(dataframe, critial_level=0.05):
     # Use Seaborn to plot a heatmap of our results matrix
 
 
+df = combo
+
+binance_symbols = df.columns
+
+# Set up the split point for our "training data" on which to perform the co-integration test (the remaining dat awill be fed to our backtest function)
+split = int(len(df) * 0.3)
+
+# Run our dataframe (up to the split point) of ticker price data through our co-integration function and store results
+pvalue_matrix, pairs = find_cointegrated_pairs(df[:split])
+
+# Convert our matrix of stored results into a DataFrame
+pvalue_matrix_df = pd.DataFrame(pvalue_matrix)
+
+print(pairs)
+
 sns.clustermap(
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     pvalue_matrix_df,
     xticklabels=binance_symbols,
     yticklabels=binance_symbols,

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from src.analysis.performance_metrics import sharpe, mdd
 
 
-class TraditionalPairsTrading:
+class TraditionalTradingStrategy:
     def __init__(self, symbol1, symbol2, start_date, end_date, trading_cost=0.000):
         self.symbol1 = symbol1
         self.symbol2 = symbol2
